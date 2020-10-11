@@ -1,0 +1,128 @@
+---
+title: "Code-Through - Harb"
+author: "Brittany Harb"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: paged
+    theme: cerulean
+    highlight: haddock
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+library("pander")
+library("dplyr")
+
+lyrics <- read.csv("~/Fall 2020/CPP 527/lyrics.csv", comment.char="#")
+
+
+```
+
+## Song Lyrics
+
+ For my final code-through, I thought I would practice some more text analysis and maybe some text visualization. I found this dataset on kaggle to use: <https://www.kaggle.com/terminate9298/songs-lyrics?select=lyrics.csv>.
+ 
+ Here is a sample of the data:
+ 
+```{r}
+ head(lyrics) %>% pander(1)
+ 
+```
+
+<br>
+
+ It is a bit long because the entire song is typed into the dataset. 
+
+<br>
+
+ Here I am just placing some ode to clean up the data a little bit.
+
+```{r}
+lyrics$lyrics <- gsub( " ", " ", lyrics$lyrics )
+lyrics$lyrics <- gsub( "\\s", " ", lyrics$lyrics )
+lyrics$lyrics <- gsub( "[[:punct:]]", "", lyrics$lyrics )   # remove punctuation
+lyrics$lyrics <- gsub( "&nbsp;", "", lyrics$lyrics )# remove nonbreaking spaces
+lyrics$song_name <- tolower(lyrics$song_name)
+song_name_word <- strsplit(lyrics$song_name, " ")
+song_name_word <- unlist(song_name_word)
+
+head(song_name_word)
+
+
+
+```
+
+<br>
+ 
+  First I am going to look at a sample of the most commonly used words in songs for the entire dataset. 
+  
+```{r}
+
+lower.lyrics <- tolower( lyrics$lyrics ) # convert to lower case
+
+words <- strsplit( lower.lyrics, " " )
+t <- table( unlist( words ) )
+
+t %>% 
+  sort() %>% 
+  tail( 25 ) %>%
+  pander()
+
+```
+
+<br>
+
+ Now I am going to use lapply to count the number of words in the songs. I'm only going to count the first six, only because I want to show the function, and I'd rather not have a whole sheet of numbers.
+
+```{r}
+
+first.six.songs <- head( lyrics$lyrics )
+word.list  <- strsplit( first.six.songs , " " )
+
+word.count <- lapply( word.list, length )
+
+word.count <- unlist( word.count )         # convert to a vector
+word.count
+
+```
+
+ There is a lot of variance in the number of words in songs!
+
+<br>
+
+Now we are going to build a word cloud! For this I'm going to look at the song titles, as they will be more telling I think of the nature of the songs. First we are going to use Corpus() from the text mining package. I found this website to be very instructional: <http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know#:~:text=The%20procedure%20of%20creating%20word,keywords%20as%20a%20word%20cloud.>
+
+```{r}
+
+docs <- Corpus(VectorSource(song_name_word))
+
+
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+```
+
+<br>
+
+Now that all of the background stuff is done, we are goinf to make the cloud! Woohoo!
+
+```{r}
+set.seed(12345)
+wordcloud(words = d$word, freq = d$freq, min.freq = 20,
+          max.words=200, random.order=FALSE, rot.per=0.6, 
+          colors=brewer.pal(12, "Paired"))
+
+```
+
+<br>
+
+So there it is! I didn't want to do anything too crazy, just practicing some more text analysis and making a word cloud of the most used words in song titles! I hope you enjoyed this little code-through!
